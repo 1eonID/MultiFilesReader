@@ -6,8 +6,21 @@
 
     <groupId>com.leonid.multifilesreader</groupId>
     <artifactId>MultiFilesReader</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.10</version>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>24.1.1-jre</version>
+        </dependency>
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>3.8</version>
+        </dependency>
+
+    </dependencies>
     <build>
         <plugins>
             <plugin>
