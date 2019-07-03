@@ -2,8 +2,8 @@ package com.leonid.multifilesreader.interfaces;
 
 import com.leonid.multifilesreader.beans.CsvBean;
 
-import java.util.concurrent.ConcurrentMap;
+import java.util.Set;
 
 public interface CustomFileWriter {
-    void writeToCsvFile(ConcurrentMap<CsvBean, Float> resultMap, String pathToOutputFile);
+    void writeToCsvFile(Set<CsvBean> resultSet, String pathToOutputFile);
 }

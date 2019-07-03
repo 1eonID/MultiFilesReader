@@ -7,24 +7,19 @@ import com.opencsv.CSVReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import static java.util.Map.Entry.comparingByValue;
-import static java.util.stream.Collectors.toMap;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class CsvParser implements CustomFileParser {
 
     @Override
-    public Map<CsvBean, Float> parseInputCsvFile(File file) {
+    public Set<CsvBean> parseInputCsvFile(File file) {
         int maxQuantityOfSameProductId = 20;
-        Map<CsvBean, Float> map = new HashMap<>();
-        CSVReader reader = null;
-        try {
-            reader = new CSVReader(new FileReader(file));
+        int maxMapSize = 1000;
+        Map<Integer, Set<CsvBean>> map = new HashMap<>();
+
+        try (CSVReader reader = new CSVReader(new FileReader(file))){
             String[] line;
-            Map<Integer, Map<Integer, Float>> idsCounter = new HashMap<>();
             reader.readNext();
             while ((line = reader.readNext()) != null) {
                 Integer productId = Integer.parseInt(line[0]);
@@ -33,41 +28,49 @@ public class CsvParser implements CustomFileParser {
                 String state = line[3];
                 Float price = Float.parseFloat(line[4]);
 
-                if (idsCounter.containsKey(productId)) {
-                    Map<Integer, Float> internalMap = idsCounter.get(productId);
-                    // if we found more than 20 same productId, then we sort internal map and put new item, if it cheapest
-                    if (internalMap.size() >= maxQuantityOfSameProductId) {
-                        Map<Integer, Float> sortedInternalMap = internalMap
-                                .entrySet()
-                                .stream()
-                                .sorted(comparingByValue())
-                                .collect(
-                                        toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2,
-                                                LinkedHashMap::new));
-                        if (sortedInternalMap.get(maxQuantityOfSameProductId) > price) {
-                            sortedInternalMap.put(maxQuantityOfSameProductId, price);
-                            idsCounter.put(productId, sortedInternalMap);
-                        } else {
-                            continue;
-                        }
-                    } else {
-                        internalMap.put(internalMap.size() + 1, price);
-                        idsCounter.put(productId, internalMap);
-                    }
-                } else {
-                    Map<Integer, Float> internalMap = new HashMap<>();
-                    internalMap.put(1, price);
-                    idsCounter.put(productId, internalMap);
-                }
+                if (!line[0].isEmpty() && !line[4].isEmpty()) {
+                    CsvBean bean = new CsvBean(productId, name, condition, state, price);
 
-                CsvBean bean = new CsvBean(productId, name, condition, state, price);
-                map.put(bean, price);
-                System.out.println("Row: " + bean.toString());
+                    if (map.containsKey(productId)) {
+                        Set<CsvBean> existedInternalSet = map.get(productId);
+                        existedInternalSet.add(bean);
+                        map.put(productId, existedInternalSet);
+                    } else {
+                        Set<CsvBean> newInternalSet = new TreeSet<>(new Comparator<CsvBean>() {
+                            @Override
+                            public int compare(CsvBean o1, CsvBean o2) {
+                                // new elements will add and sort automatically
+                                return o1.getPrice().compareTo(o2.getPrice());
+                            }
+                        });
+                        newInternalSet.add(bean);
+                        map.put(productId, newInternalSet);
+                    }
+                    System.out.println("Row: " + bean.toString());
+                } else {
+                    System.out.println("Some fields are empty if line: " + line);
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+        //cut sorted sets(no more than 20 objects with same productId)
+        Map<Integer, Set<CsvBean>> cutMap = new HashMap<>();
+        map.forEach((key, value) -> cutMap.put(key, value.stream()
+                                                            .limit(maxQuantityOfSameProductId)
+                                                            .collect(Collectors.toSet())));
 
-        return map;
+        //add all left elements to set and limit to 1000 elements
+        Set<CsvBean> resultSet = new TreeSet<>(new Comparator<CsvBean>() {
+            @Override
+            public int compare(CsvBean o1, CsvBean o2) {
+                // new elements will add and sort automatically
+                return o1.getPrice().compareTo(o2.getPrice());
+            }
+        });
+
+        cutMap.forEach((key, value) -> resultSet.addAll(value));
+
+        return resultSet.stream().limit(maxMapSize).collect(Collectors.toSet());
     }
 }

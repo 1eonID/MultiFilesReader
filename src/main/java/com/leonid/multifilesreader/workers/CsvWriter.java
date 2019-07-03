@@ -8,7 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Set;
 
 import static java.util.Map.Entry.comparingByValue;
 import static java.util.stream.Collectors.toMap;
@@ -18,14 +18,7 @@ public class CsvWriter implements CustomFileWriter {
     private int maxSameIDnumber = 20;
 
     @Override
-    public void writeToCsvFile(ConcurrentMap<CsvBean, Float> resultMap, String pathToOutputFile) {
-        Map<CsvBean, Float> sortedMap = resultMap
-                .entrySet()
-                .stream()
-                .sorted(comparingByValue())
-                .collect(
-                        toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2,
-                                LinkedHashMap::new));
+    public void writeToCsvFile(Set<CsvBean> resultSet, String pathToOutputFile) {
 
         CSVWriter csvWriter = null;
         try {
@@ -33,13 +26,13 @@ public class CsvWriter implements CustomFileWriter {
             String[] entries = {"Product ID", "Name", "Condition", "State", "Price"};
             csvWriter.writeNext(entries);
             int count = 0;
-            for (Map.Entry<CsvBean, Float> entry: sortedMap.entrySet()) {
+            for (CsvBean csvBean : resultSet) {
                 if (count >= maxColumnumber) break;
-                String[] rowEntry = {entry.getKey().getProductId().toString(),
-                        entry.getKey().getName(),
-                        entry.getKey().getCondition(),
-                        entry.getKey().getState(),
-                        entry.getKey().getPrice().toString()};
+                String[] rowEntry = {csvBean.getProductId().toString(),
+                        csvBean.getName(),
+                        csvBean.getCondition(),
+                        csvBean.getState(),
+                        csvBean.getPrice().toString()};
                 csvWriter.writeNext(rowEntry);
                 count++;
             }
